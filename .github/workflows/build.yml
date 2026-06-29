@@ -10,8 +10,7 @@ env:
   FLUTTER_VERSION: '3.24.0'
   JAVA_VERSION: '17'
   APP_NAME: harmony-player
-  # Force Node 24 for all actions
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # ⭐ Force Node 24
 
 permissions:
   contents: write
@@ -27,7 +26,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Setup Java
-        uses: actions/setup-java@v5  # ⭐ Upgraded from v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -39,27 +38,26 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # ⭐ Disable Flutter Analytics banner
+      - name: Disable Flutter Analytics
+        run: flutter config --no-analytics
+
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v4  # ⭐ Upgraded from v3
+        uses: android-actions/setup-android@v4
 
       - name: Accept Android Licenses
         run: yes | sdkmanager --licenses || true
 
-      # ⭐ Create placeholder icon for flutter_launcher_icons
       - name: Create placeholder assets
         run: |
           set -e
           mkdir -p assets/images
           if [ ! -f "assets/images/icon.png" ]; then
-            # Create a simple 1024x1024 PNG placeholder (purple gradient)
-            # Using base64 encoded minimal valid PNG
             echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > assets/images/icon.png
-            # Use ImageMagick if available to create proper icon
             if command -v convert >/dev/null 2>&1; then
-              convert -size 1024x1024 xc:"#6750A4" assets/images/icon.png
+              convert -size 1024x1024 xc:"#6750A4" assets/images/icon.png || true
             fi
           fi
-          ls -la assets/images/
 
       - name: Install dependencies
         run: flutter pub get
@@ -67,7 +65,6 @@ jobs:
       - name: Generate Hive adapters
         run: dart run build_runner build --delete-conflicting-outputs
 
-      # ⭐ Generate icons only if flutter_launcher_icons is configured
       - name: Generate app icons
         run: |
           set -e
@@ -113,7 +110,7 @@ jobs:
           [ -f app-armeabi-v7a-release.apk ] && mv app-armeabi-v7a-release.apk ${{ env.APP_NAME }}-${{ github.ref_name }}-arm.apk || true
           [ -f app-x86_64-release.apk ] && mv app-x86_64-release.apk ${{ env.APP_NAME }}-${{ github.ref_name }}-x86_64.apk || true
 
-      - uses: actions/upload-artifact@v5  # ⭐ Upgraded from v4
+      - uses: actions/upload-artifact@v5
         with:
           name: android-artifacts
           path: build/app/outputs/flutter_apk/*.apk
@@ -134,6 +131,9 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Disable Flutter Analytics
+        run: flutter config --no-analytics
+
       - name: Install CocoaPods
         run: sudo gem install cocoapods
 
@@ -143,9 +143,6 @@ jobs:
           mkdir -p assets/images
           if [ ! -f "assets/images/icon.png" ]; then
             echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > assets/images/icon.png
-            if command -v convert >/dev/null 2>&1; then
-              convert -size 1024x1024 xc:"#6750A4" assets/images/icon.png
-            fi
           fi
 
       - name: Install dependencies
@@ -200,12 +197,14 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Disable Flutter Analytics
+        run: flutter config --no-analytics
+
       - name: Create placeholder assets
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force -Path "assets\images" | Out-Null
           if (-Not (Test-Path "assets\images\icon.png")) {
-            # Create minimal PNG
             [byte[]]$png = [Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==")
             [IO.File]::WriteAllBytes("assets\images\icon.png", $png)
           }
@@ -247,7 +246,7 @@ jobs:
   # ═══════════════════════════════════════════════════════════
   build-macos:
     name: 🍎 macOS
-    runs-on: macos-15  # ⭐ Pinned to avoid macOS 26 breaking changes (OpenSSL 3.x, Xcode 26)
+    runs-on: macos-15  # ⭐ Pinned to avoid macOS 26 OpenSSL 3.x breaking changes
     steps:
       - uses: actions/checkout@v5
 
@@ -258,15 +257,15 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Disable Flutter Analytics
+        run: flutter config --no-analytics
+
       - name: Create placeholder assets
         run: |
           set -e
           mkdir -p assets/images
           if [ ! -f "assets/images/icon.png" ]; then
             echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > assets/images/icon.png
-            if command -v convert >/dev/null 2>&1; then
-              convert -size 1024x1024 xc:"#6750A4" assets/images/icon.png
-            fi
           fi
 
       - name: Install dependencies
@@ -297,6 +296,7 @@ jobs:
           flutter build macos --release
 
       - name: Create DMG
+        id: create_dmg
         run: |
           set -e
           brew install create-dmg
@@ -307,14 +307,18 @@ jobs:
             --icon-size 100 \
             --app-drop-link 600 185 \
             "${{ env.APP_NAME }}-${{ github.ref_name }}-macos.dmg" \
-            "build/macos/Build/Products/Release/" || echo "DMG creation failed, creating tar.gz instead"
+            "build/macos/Build/Products/Release/" || exit 1
 
-      # ⭐ Fallback: If DMG fails, create tar.gz
+      # ⭐ Fixed fallback: Check directory exists before cd
       - name: Create tar.gz fallback
         if: failure()
         run: |
-          cd build/macos/Build/Products/Release
-          tar -czvf ${{ env.APP_NAME }}-${{ github.ref_name }}-macos.tar.gz *.app
+          if [ -d "build/macos/Build/Products/Release" ]; then
+            cd build/macos/Build/Products/Release
+            tar -czvf ../../../../../${{ env.APP_NAME }}-${{ github.ref_name }}-macos.tar.gz *.app || true
+          else
+            echo "Build directory not found. Skipping tar.gz creation due to earlier build failure."
+          fi
 
       - uses: actions/upload-artifact@v5
         with:
@@ -347,6 +351,9 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
           cache: true
+
+      - name: Disable Flutter Analytics
+        run: flutter config --no-analytics
 
       - name: Create placeholder assets
         run: |
@@ -396,7 +403,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v5  # ⭐ Upgraded from v4
+        uses: actions/download-artifact@v5
         with:
           path: artifacts
           merge-multiple: false
