@@ -45,7 +45,8 @@ class FavoritesScreen extends ConsumerWidget {
                           ref.read(favoritesProvider.notifier).clear();
                           Navigator.pop(ctx);
                         },
-                        child: const Text('Clear', style: TextStyle(color: Colors.red)),
+                        child: const Text('Clear',
+                            style: TextStyle(color: Colors.red)),
                       ),
                     ],
                   ),
@@ -107,7 +108,9 @@ class FavoritesScreen extends ConsumerWidget {
                       return SongTile(
                         song: song,
                         onTap: () {
-                          ref.read(playerProvider.notifier).playQueue(favorites, i);
+                          ref
+                              .read(playerProvider.notifier)
+                              .playQueue(favorites, i);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
