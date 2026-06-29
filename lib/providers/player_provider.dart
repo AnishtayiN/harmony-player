@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:hive/hive.dart';
 import '../models/song.dart';
 import '../services/audio_service.dart';
 import '../services/library_service.dart';
@@ -17,6 +18,7 @@ class PlayerState {
   final int queueIndex;
   final bool isShuffled;
   final LoopMode loopMode;
+  final double playbackSpeed;
 
   const PlayerState({
     this.status = PlayerStatus.idle,
@@ -27,6 +29,7 @@ class PlayerState {
     this.queueIndex = 0,
     this.isShuffled = false,
     this.loopMode = LoopMode.off,
+    this.playbackSpeed = 1.0,
   });
 
   PlayerState copyWith({
@@ -38,6 +41,7 @@ class PlayerState {
     int? queueIndex,
     bool? isShuffled,
     LoopMode? loopMode,
+    double? playbackSpeed,
   }) {
     return PlayerState(
       status: status ?? this.status,
@@ -48,6 +52,7 @@ class PlayerState {
       queueIndex: queueIndex ?? this.queueIndex,
       isShuffled: isShuffled ?? this.isShuffled,
       loopMode: loopMode ?? this.loopMode,
+      playbackSpeed: playbackSpeed ?? this.playbackSpeed,
     );
   }
 }
@@ -59,9 +64,17 @@ class PlayerController extends StateNotifier<PlayerState> {
 
   PlayerController(this._audioHandler) : super(const PlayerState()) {
     _initStreams();
+    _loadSavedSpeed();
   }
 
   AudioPlayer get player => _player;
+
+  Future<void> _loadSavedSpeed() async {
+    final box = Hive.box('settings');
+    final speed = (box.get('playback_speed', defaultValue: 1.0) as num).toDouble();
+    await _player.setSpeed(speed);
+    state = state.copyWith(playbackSpeed: speed);
+  }
 
   void _initStreams() {
     _subscriptions.add(_player.positionStream.listen((p) {
@@ -69,9 +82,7 @@ class PlayerController extends StateNotifier<PlayerState> {
     }));
 
     _subscriptions.add(_player.durationStream.listen((d) {
-      if (d != null) {
-        state = state.copyWith(duration: d);
-      }
+      if (d != null) state = state.copyWith(duration: d);
     }));
 
     _subscriptions.add(_player.playerStateStream.listen((s) {
@@ -106,6 +117,7 @@ class PlayerController extends StateNotifier<PlayerState> {
         queueIndex: 0,
       );
       await _audioHandler.loadSong(song);
+      await _player.setSpeed(state.playbackSpeed);
       await _audioHandler.play();
     } catch (e) {
       debugPrint('[Player] playSong error: $e');
@@ -123,8 +135,9 @@ class PlayerController extends StateNotifier<PlayerState> {
         queueIndex: safeIndex,
         currentSong: songs[safeIndex],
       );
-      await _audioHandler.setQueue(songs);
-      await _player.seek(Duration.zero, index: safeIndex);
+      
+      await _audioHandler.setQueue(songs, initialIndex: safeIndex);
+      await _player.setSpeed(state.playbackSpeed);
       await _audioHandler.play();
     } catch (e) {
       debugPrint('[Player] playQueue error: $e');
@@ -132,13 +145,8 @@ class PlayerController extends StateNotifier<PlayerState> {
     }
   }
 
-  Future<void> play() async {
-    await _audioHandler.play();
-  }
-
-  Future<void> pause() async {
-    await _audioHandler.pause();
-  }
+  Future<void> play() async => _audioHandler.play();
+  Future<void> pause() async => _audioHandler.pause();
 
   Future<void> toggle() async {
     if (state.status == PlayerStatus.playing) {
@@ -164,9 +172,7 @@ class PlayerController extends StateNotifier<PlayerState> {
     }
   }
 
-  Future<void> seek(Duration position) async {
-    await _player.seek(position);
-  }
+  Future<void> seek(Duration position) async => _player.seek(position);
 
   Future<void> toggleShuffle() async {
     final newShuffle = !state.isShuffled;
@@ -197,6 +203,11 @@ class PlayerController extends StateNotifier<PlayerState> {
               ? AudioServiceRepeatMode.all
               : AudioServiceRepeatMode.none,
     );
+  }
+
+  Future<void> setPlaybackSpeed(double speed) async {
+    await _player.setSpeed(speed);
+    state = state.copyWith(playbackSpeed: speed);
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
