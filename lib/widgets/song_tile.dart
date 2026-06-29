@@ -7,13 +7,11 @@ import 'album_art_widget.dart';
 class SongTile extends ConsumerWidget {
   final Song song;
   final VoidCallback onTap;
-  final VoidCallback? onMore;
 
   const SongTile({
     super.key,
     required this.song,
     required this.onTap,
-    this.onMore,
   });
 
   String _formatDuration(Duration d) {
@@ -67,12 +65,16 @@ class SongTile extends ConsumerWidget {
               IconButton(
                 icon: Icon(
                   isFav ? Icons.favorite : Icons.favorite_border,
-                  color: isFav ? Colors.redAccent : theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: isFav
+                      ? Colors.redAccent
+                      : theme.colorScheme.onSurface.withOpacity(0.5),
                 ),
-                onPressed: () => ref.read(favoritesProvider.notifier).toggle(song),
+                onPressed: () =>
+                    ref.read(favoritesProvider.notifier).toggle(song),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
