@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:audiotags/audiotags.dart';
+import 'package:flutter_media_metadata/flutter_media_metadata.dart';
+import 'dart:io';
 import '../models/song.dart';
 
 class AlbumArtWidget extends StatefulWidget {
@@ -32,9 +33,7 @@ class _AlbumArtWidgetState extends State<AlbumArtWidget> {
   @override
   void didUpdateWidget(covariant AlbumArtWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.song.id != widget.song.id) {
-      _loadArtwork();
-    }
+    if (oldWidget.song.id != widget.song.id) _loadArtwork();
   }
 
   Future<void> _loadArtwork() async {
@@ -44,13 +43,10 @@ class _AlbumArtWidgetState extends State<AlbumArtWidget> {
     });
 
     try {
-      final audioTag = await AudioTags.getTags(widget.song.path);
-      if (audioTag != null &&
-          audioTag.images.isNotEmpty &&
-          audioTag.images[0].image != null &&
-          mounted) {
+      final metadata = await MetadataRetriever.fromFile(File(widget.song.path));
+      if (metadata.albumArt != null && mounted) {
         setState(() {
-          _imageBytes = audioTag.images[0].image!;
+          _imageBytes = metadata.albumArt;
           _loading = false;
         });
       } else if (mounted) {
