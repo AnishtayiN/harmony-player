@@ -7,11 +7,20 @@ class SettingsController extends StateNotifier<SettingsState> {
 
   SettingsController(this._box)
       : super(SettingsState(
-          themeMode: ThemeMode.values[_box.get('theme_mode', defaultValue: 0) as int],
+          themeMode: _getThemeMode(_box),
           autoUpdateEnabled: _box.get('auto_update', defaultValue: true) as bool,
           visualizerEnabled: _box.get('visualizer', defaultValue: true) as bool,
-          playbackSpeed: (_box.get('playback_speed', defaultValue: 1.0) as num).toDouble(),
+          playbackSpeed:
+              (_box.get('playback_speed', defaultValue: 1.0) as num).toDouble(),
         ));
+
+  static ThemeMode _getThemeMode(Box box) {
+    final index = box.get('theme_mode', defaultValue: 0) as int;
+    if (index >= 0 && index < ThemeMode.values.length) {
+      return ThemeMode.values[index];
+    }
+    return ThemeMode.system;
+  }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     await _box.put('theme_mode', mode.index);
