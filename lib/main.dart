@@ -79,6 +79,8 @@ class _HarmonyAppState extends ConsumerState<HarmonyApp>
   }
 
   Future<void> _checkForUpdates({bool force = false}) async {
+    if (!mounted) return;
+    
     final settings = ref.read(settingsProvider);
     if (!settings.autoUpdateEnabled && !force) return;
 
@@ -86,7 +88,8 @@ class _HarmonyAppState extends ConsumerState<HarmonyApp>
 
     if (!force) {
       final last = _storage.lastUpdateCheck;
-      if (last != null && now.difference(last) < AppConstants.updateCheckInterval) {
+      if (last != null &&
+          now.difference(last) < AppConstants.updateCheckInterval) {
         return;
       }
     }
