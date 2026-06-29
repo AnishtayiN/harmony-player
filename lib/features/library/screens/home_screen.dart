@@ -25,7 +25,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = ref.read(playerProvider.notifier);
+    final state = ref.watch(playerProvider);
 
     return Scaffold(
       body: IndexedStack(
@@ -35,7 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (controller.player.currentSong != null) const MiniPlayer(),
+          if (state.currentSong != null) const MiniPlayer(),
           const DeveloperFooter(),
           NavigationBar(
             selectedIndex: _currentIndex,
