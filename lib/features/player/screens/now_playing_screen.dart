@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
-import '../../../models/song.dart';
 import '../../../providers/player_provider.dart';
 import '../../../providers/favorites_provider.dart';
 import '../../../providers/settings_provider.dart';
@@ -67,7 +66,9 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                 builder: (c, snap) {
                   final rem = snap.data;
                   return Text(
-                    rem == null ? 'Not set' : 'Time remaining: ${_fmt(rem)}',
+                    rem == null
+                        ? 'Not set'
+                        : 'Time remaining: ${_fmt(rem)}',
                     style: const TextStyle(fontSize: 16),
                   );
                 },
@@ -83,7 +84,8 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                         ref.read(playerProvider.notifier).pause();
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Sleep timer ended, paused music')),
+                            const SnackBar(
+                                content: Text('Sleep timer ended, paused music')),
                           );
                         }
                       },
@@ -119,7 +121,8 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     final controller = ref.read(playerProvider.notifier);
     final settings = ref.watch(settingsProvider);
     final song = playerState.currentSong;
-    final isFav = song != null && ref.watch(favoritesProvider).contains(song.id);
+    final isFav =
+        song != null && ref.watch(favoritesProvider).contains(song.id);
 
     if (song == null) {
       return Scaffold(
@@ -129,7 +132,9 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     }
 
     if (playerState.status == PlayerStatus.playing) {
-      if (!_pulseController.isAnimating) _pulseController.repeat(reverse: true);
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
     } else {
       _pulseController.stop();
       _pulseController.value = 0;
@@ -190,9 +195,13 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                 value: 'sleep',
                 child: Row(
                   children: [
-                    Icon(_sleepTimer.isActive ? Icons.bedtime : Icons.bedtime_outlined),
+                    Icon(_sleepTimer.isActive
+                        ? Icons.bedtime
+                        : Icons.bedtime_outlined),
                     const SizedBox(width: 12),
-                    Text(_sleepTimer.isActive ? 'Sleep Timer (Active)' : 'Sleep Timer'),
+                    Text(_sleepTimer.isActive
+                        ? 'Sleep Timer (Active)'
+                        : 'Sleep Timer'),
                   ],
                 ),
               ),
@@ -213,7 +222,6 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
               children: [
                 const Spacer(flex: 1),
 
-                // Album Art
                 AnimatedBuilder(
                   animation: _pulseAnimation,
                   builder: (ctx, child) {
@@ -245,7 +253,6 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                 ),
                 const SizedBox(height: 24),
 
-                // Visualizer
                 if (settings.visualizerEnabled)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
@@ -258,43 +265,29 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
 
                 const SizedBox(height: 16),
 
-                // Title & Artist
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            song.title,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${song.artist} • ${song.album}',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white70,
-                            ),
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                Text(
+                  song.title,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${song.artist} • ${song.album}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white70,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
 
                 const SizedBox(height: 24),
 
-                // Progress Slider
                 StreamBuilder<Duration>(
                   stream: controller.player.positionStream,
                   initialData: playerState.position,
@@ -306,7 +299,8 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                         final pos = posSnap.data ?? playerState.position;
                         final dur = durSnap.data ?? playerState.duration;
                         final max = dur.inMilliseconds.toDouble();
-                        final val = pos.inMilliseconds.toDouble().clamp(0.0, max);
+                        final val =
+                            pos.inMilliseconds.toDouble().clamp(0.0, max);
 
                         return Column(
                           children: [
@@ -318,28 +312,33 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                                 overlayShape: const RoundSliderOverlayShape(
                                     overlayRadius: 16),
                                 activeTrackColor: Colors.white,
-                                inactiveTrackColor: Colors.white.withOpacity(0.2),
+                                inactiveTrackColor:
+                                    Colors.white.withOpacity(0.2),
                                 thumbColor: Colors.white,
                               ),
                               child: Slider(
                                 min: 0,
                                 max: max == 0 ? 1 : max,
                                 value: max == 0 ? 0 : val,
-                                onChanged: (v) => controller.seek(
-                                    Duration(milliseconds: v.toInt())),
+                                onChanged: (v) => controller
+                                    .seek(Duration(milliseconds: v.toInt())),
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(_fmt(pos),
                                       style: const TextStyle(
-                                          color: Colors.white70, fontSize: 12)),
+                                          color: Colors.white70,
+                                          fontSize: 12)),
                                   Text(_fmt(dur),
                                       style: const TextStyle(
-                                          color: Colors.white70, fontSize: 12)),
+                                          color: Colors.white70,
+                                          fontSize: 12)),
                                 ],
                               ),
                             ),
@@ -352,17 +351,16 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
 
                 const SizedBox(height: 16),
 
-                // Controls
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     IconButton(
-                      onPressed: () => ref
-                          .read(favoritesProvider.notifier)
-                          .toggle(song),
+                      onPressed: () =>
+                          ref.read(favoritesProvider.notifier).toggle(song),
                       icon: Icon(
                         isFav ? Icons.favorite : Icons.favorite_border,
-                        color: isFav ? Colors.redAccent : Colors.white70,
+                        color:
+                            isFav ? Colors.redAccent : Colors.white70,
                         size: 28,
                       ),
                     ),
@@ -401,10 +399,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                           color: Colors.white, size: 44),
                     ),
                     _ControlButton(
-                      icon: controller.player.loopMode == LoopMode.one
+                      icon: playerState.loopMode == LoopMode.one
                           ? Icons.repeat_one
                           : Icons.repeat,
-                      active: controller.player.loopMode != LoopMode.off,
+                      active: playerState.loopMode != LoopMode.off,
                       onPressed: controller.cycleRepeat,
                     ),
                   ],
