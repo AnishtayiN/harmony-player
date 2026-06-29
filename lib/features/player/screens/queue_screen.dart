@@ -26,7 +26,8 @@ class QueueScreen extends ConsumerWidget {
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Clear Queue?'),
-                    content: const Text('This will remove all songs except the current one.'),
+                    content: const Text(
+                        'This will remove all songs except the current one.'),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
@@ -35,7 +36,8 @@ class QueueScreen extends ConsumerWidget {
                       TextButton(
                         onPressed: () {
                           if (playerState.currentSong != null) {
-                            controller.playQueue([playerState.currentSong!], 0);
+                            controller
+                                .playQueue([playerState.currentSong!], 0);
                           }
                           Navigator.pop(ctx);
                         },
@@ -67,7 +69,7 @@ class QueueScreen extends ConsumerWidget {
                 final song = playerState.queue[i];
                 final isCurrent = i == playerState.queueIndex;
                 return _QueueTile(
-                  key: ValueKey('${song.id}_$i'),
+                  key: ValueKey('queue_${song.id}_${song.hashCode}_$i'),
                   song: song,
                   index: i,
                   isCurrent: isCurrent,
@@ -146,7 +148,9 @@ class _QueueTile extends StatelessWidget {
                       color: isCurrent
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurface.withOpacity(0.5),
-                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isCurrent
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -162,7 +166,8 @@ class _QueueTile extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                          fontWeight:
+                              isCurrent ? FontWeight.bold : FontWeight.w500,
                           color: isCurrent ? theme.colorScheme.primary : null,
                         ),
                       ),
@@ -180,7 +185,8 @@ class _QueueTile extends StatelessWidget {
                 ),
                 if (isCurrent)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary,
                       borderRadius: BorderRadius.circular(12),
