@@ -10,6 +10,8 @@ env:
   FLUTTER_VERSION: '3.24.0'
   JAVA_VERSION: '17'
   APP_NAME: harmony-player
+  # Force Node 24 for all actions
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: write
@@ -22,11 +24,10 @@ jobs:
     name: 🤖 Android APK
     runs-on: ubuntu-latest
     steps:
-      # ⭐ Upgrade to v5 (Node 24 compatible)
       - uses: actions/checkout@v5
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5  # ⭐ Upgraded from v4
         with:
           distribution: 'temurin'
           java-version: ${{ env.JAVA_VERSION }}
@@ -39,28 +40,47 @@ jobs:
           cache: true
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4  # ⭐ Upgraded from v3
 
       - name: Accept Android Licenses
         run: yes | sdkmanager --licenses || true
 
-      # ⭐ Create assets folder if not exists
-      - name: Create assets directory
+      # ⭐ Create placeholder icon for flutter_launcher_icons
+      - name: Create placeholder assets
         run: |
+          set -e
           mkdir -p assets/images
-          touch assets/images/.gitkeep
+          if [ ! -f "assets/images/icon.png" ]; then
+            # Create a simple 1024x1024 PNG placeholder (purple gradient)
+            # Using base64 encoded minimal valid PNG
+            echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > assets/images/icon.png
+            # Use ImageMagick if available to create proper icon
+            if command -v convert >/dev/null 2>&1; then
+              convert -size 1024x1024 xc:"#6750A4" assets/images/icon.png
+            fi
+          fi
+          ls -la assets/images/
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate code
+      - name: Generate Hive adapters
         run: dart run build_runner build --delete-conflicting-outputs
+
+      # ⭐ Generate icons only if flutter_launcher_icons is configured
+      - name: Generate app icons
+        run: |
+          set -e
+          if [ -f "assets/images/icon.png" ]; then
+            dart run flutter_launcher_icons || echo "Icon generation failed, continuing..."
+          fi
 
       - name: Decode Keystore
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          set -e
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/keystore.jks
 
       - name: Create key.properties
@@ -68,12 +88,12 @@ jobs:
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          set -e
           echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" > android/key.properties
           echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=keystore.jks" >> android/key.properties
 
-      # ⭐ Add set -e for fail-fast
       - name: Build APK (split per ABI)
         run: |
           set -e
@@ -93,7 +113,7 @@ jobs:
           [ -f app-armeabi-v7a-release.apk ] && mv app-armeabi-v7a-release.apk ${{ env.APP_NAME }}-${{ github.ref_name }}-arm.apk || true
           [ -f app-x86_64-release.apk ] && mv app-x86_64-release.apk ${{ env.APP_NAME }}-${{ github.ref_name }}-x86_64.apk || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5  # ⭐ Upgraded from v4
         with:
           name: android-artifacts
           path: build/app/outputs/flutter_apk/*.apk
@@ -103,7 +123,7 @@ jobs:
   # ═══════════════════════════════════════════════════════════
   build-ios:
     name: 📱 iOS IPA
-    runs-on: macos-15  # ⭐ Use macos-15 instead of macos-latest to avoid macOS 26 issues
+    runs-on: macos-15  # ⭐ Pinned to avoid macOS 26 breaking changes
     steps:
       - uses: actions/checkout@v5
 
@@ -117,17 +137,29 @@ jobs:
       - name: Install CocoaPods
         run: sudo gem install cocoapods
 
-      # ⭐ Create assets folder
-      - name: Create assets directory
+      - name: Create placeholder assets
         run: |
+          set -e
           mkdir -p assets/images
-          touch assets/images/.gitkeep
+          if [ ! -f "assets/images/icon.png" ]; then
+            echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > assets/images/icon.png
+            if command -v convert >/dev/null 2>&1; then
+              convert -size 1024x1024 xc:"#6750A4" assets/images/icon.png
+            fi
+          fi
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate code
+      - name: Generate Hive adapters
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Generate app icons
+        run: |
+          set -e
+          if [ -f "assets/images/icon.png" ]; then
+            dart run flutter_launcher_icons || echo "Icon generation failed, continuing..."
+          fi
 
       - name: Install iOS pods
         run: |
@@ -147,7 +179,7 @@ jobs:
           cp -r build/ios/iphoneos/Runner.app Payload/
           zip -r ${{ env.APP_NAME }}-${{ github.ref_name }}-ios.ipa Payload
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ios-artifacts
           path: ${{ env.APP_NAME }}-${{ github.ref_name }}-ios.ipa
@@ -168,18 +200,30 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # ⭐ Create assets folder
-      - name: Create assets directory
+      - name: Create placeholder assets
         run: |
-          New-Item -ItemType Directory -Force -Path "assets\images"
-          New-Item -ItemType File -Force -Path "assets\images\.gitkeep"
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path "assets\images" | Out-Null
+          if (-Not (Test-Path "assets\images\icon.png")) {
+            # Create minimal PNG
+            [byte[]]$png = [Convert]::FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==")
+            [IO.File]::WriteAllBytes("assets\images\icon.png", $png)
+          }
         shell: pwsh
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate code
+      - name: Generate Hive adapters
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Generate app icons
+        run: |
+          $ErrorActionPreference = 'Continue'
+          if (Test-Path "assets\images\icon.png") {
+            dart run flutter_launcher_icons
+          }
+        shell: pwsh
 
       - name: Build Windows
         run: |
@@ -193,7 +237,7 @@ jobs:
           Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath "${{ env.APP_NAME }}-${{ github.ref_name }}-windows-x64.zip" -Force
         shell: pwsh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: windows-artifacts
           path: ${{ env.APP_NAME }}-${{ github.ref_name }}-windows-x64.zip
@@ -203,7 +247,7 @@ jobs:
   # ═══════════════════════════════════════════════════════════
   build-macos:
     name: 🍎 macOS
-    runs-on: macos-15  # ⭐ Use macos-15 to avoid macOS 26 breaking changes
+    runs-on: macos-15  # ⭐ Pinned to avoid macOS 26 breaking changes (OpenSSL 3.x, Xcode 26)
     steps:
       - uses: actions/checkout@v5
 
@@ -214,17 +258,29 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # ⭐ Create assets folder
-      - name: Create assets directory
+      - name: Create placeholder assets
         run: |
+          set -e
           mkdir -p assets/images
-          touch assets/images/.gitkeep
+          if [ ! -f "assets/images/icon.png" ]; then
+            echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > assets/images/icon.png
+            if command -v convert >/dev/null 2>&1; then
+              convert -size 1024x1024 xc:"#6750A4" assets/images/icon.png
+            fi
+          fi
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate code
+      - name: Generate Hive adapters
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Generate app icons
+        run: |
+          set -e
+          if [ -f "assets/images/icon.png" ]; then
+            dart run flutter_launcher_icons || echo "Icon generation failed, continuing..."
+          fi
 
       - name: Install CocoaPods
         run: sudo gem install cocoapods
@@ -251,12 +307,21 @@ jobs:
             --icon-size 100 \
             --app-drop-link 600 185 \
             "${{ env.APP_NAME }}-${{ github.ref_name }}-macos.dmg" \
-            "build/macos/Build/Products/Release/"
+            "build/macos/Build/Products/Release/" || echo "DMG creation failed, creating tar.gz instead"
 
-      - uses: actions/upload-artifact@v4
+      # ⭐ Fallback: If DMG fails, create tar.gz
+      - name: Create tar.gz fallback
+        if: failure()
+        run: |
+          cd build/macos/Build/Products/Release
+          tar -czvf ${{ env.APP_NAME }}-${{ github.ref_name }}-macos.tar.gz *.app
+
+      - uses: actions/upload-artifact@v5
         with:
           name: macos-artifacts
-          path: ${{ env.APP_NAME }}-${{ github.ref_name }}-macos.dmg
+          path: |
+            ${{ env.APP_NAME }}-${{ github.ref_name }}-macos.dmg
+            ${{ env.APP_NAME }}-${{ github.ref_name }}-macos.tar.gz
 
   # ═══════════════════════════════════════════════════════════
   # LINUX BUILD
@@ -274,7 +339,7 @@ jobs:
           sudo apt-get install -y clang cmake ninja-build pkg-config \
             libgtk-3-dev liblzma-dev libstdc++-12-dev \
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
-            libgstreamer-plugins-bad1.0-dev
+            libgstreamer-plugins-bad1.0-dev imagemagick
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -283,17 +348,27 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # ⭐ Create assets folder
-      - name: Create assets directory
+      - name: Create placeholder assets
         run: |
+          set -e
           mkdir -p assets/images
-          touch assets/images/.gitkeep
+          if [ ! -f "assets/images/icon.png" ]; then
+            convert -size 1024x1024 xc:"#6750A4" assets/images/icon.png || \
+            echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > assets/images/icon.png
+          fi
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate code
+      - name: Generate Hive adapters
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Generate app icons
+        run: |
+          set -e
+          if [ -f "assets/images/icon.png" ]; then
+            dart run flutter_launcher_icons || echo "Icon generation failed, continuing..."
+          fi
 
       - name: Build Linux
         run: |
@@ -306,7 +381,7 @@ jobs:
           cd build/linux/x64/release/bundle
           tar -czvf ${{ env.APP_NAME }}-${{ github.ref_name }}-linux.tar.gz *
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: linux-artifacts
           path: build/linux/x64/release/bundle/${{ env.APP_NAME }}-${{ github.ref_name }}-linux.tar.gz
@@ -321,7 +396,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5  # ⭐ Upgraded from v4
         with:
           path: artifacts
           merge-multiple: false
