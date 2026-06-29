@@ -4,13 +4,16 @@ import '../models/favorite_song.dart';
 import '../models/song.dart';
 
 class FavoritesController extends StateNotifier<List<String>> {
-  final Box<FavoriteSong> _box;
+  final Box<FavoriteSong>? _box;
 
-  FavoritesController(this._box) : super(_box.values.map((f) => f.songId).toList());
+  FavoritesController(this._box)
+      : super(_box?.values.map((f) => f.songId).toList() ?? []);
 
   bool isFavorite(String songId) => state.contains(songId);
 
   Future<void> toggle(Song song) async {
+    if (_box == null) return;
+    
     if (state.contains(song.id)) {
       await _box.delete(song.id);
       state = state.where((id) => id != song.id).toList();
@@ -21,22 +24,10 @@ class FavoritesController extends StateNotifier<List<String>> {
     }
   }
 
-  Future<void> remove(String songId) async {
-    await _box.delete(songId);
-    state = state.where((id) => id != songId).toList();
-  }
-
   Future<void> clear() async {
+    if (_box == null) return;
     await _box.clear();
     state = [];
-  }
-
-  List<Song> getFavoriteSongs(Box<Song> songBox) {
-    return state
-        .map((id) => songBox.get(id))
-        .where((s) => s != null)
-        .cast<Song>()
-        .toList();
   }
 }
 
