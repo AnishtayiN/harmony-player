@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../../providers/player_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../providers/player_provider.dart';
 
 class AudioVisualizer extends ConsumerStatefulWidget {
   final int barCount;
@@ -43,13 +43,14 @@ class _AudioVisualizerState extends ConsumerState<AudioVisualizer>
       final diff = _targetHeights[i] - _barHeights[i];
       _barHeights[i] += diff * 0.3;
     }
+    _generateNewTargets();
     setState(() {});
   }
 
   void _generateNewTargets() {
     for (int i = 0; i < widget.barCount; i++) {
-      // Create wave-like pattern
-      final wave = sin(i * 0.3 + DateTime.now().millisecondsSinceEpoch * 0.002);
+      final wave =
+          sin(i * 0.3 + DateTime.now().millisecondsSinceEpoch * 0.002);
       final randomFactor = 0.3 + _random.nextDouble() * 0.7;
       _targetHeights[i] = (0.3 + wave.abs() * 0.7) * randomFactor;
     }
@@ -68,17 +69,11 @@ class _AudioVisualizerState extends ConsumerState<AudioVisualizer>
 
     if (isPlaying && !_controller.isAnimating) {
       _controller.repeat(period: const Duration(milliseconds: 150));
-      _generateNewTargets();
     } else if (!isPlaying && _controller.isAnimating) {
       _controller.stop();
-      // Smoothly animate to flat
       for (int i = 0; i < widget.barCount; i++) {
         _targetHeights[i] = 0.1;
       }
-    }
-
-    if (isPlaying) {
-      _generateNewTargets();
     }
 
     return SizedBox(
