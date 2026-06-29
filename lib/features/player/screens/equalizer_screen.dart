@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../services/equalizer_service.dart';
@@ -21,6 +22,38 @@ class _EqualizerScreenState extends ConsumerState<EqualizerScreen> {
     final theme = Theme.of(context);
     final eq = ref.watch(equalizerProvider);
 
+    if (!Platform.isAndroid) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Equalizer')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.info_outline, size: 64,
+                    color: theme.colorScheme.primary),
+                const SizedBox(height: 16),
+                Text(
+                  'Equalizer is only available on Android',
+                  style: theme.textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Audio equalization requires platform-specific APIs that are currently only supported on Android devices.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Equalizer'),
@@ -37,7 +70,22 @@ class _EqualizerScreenState extends ConsumerState<EqualizerScreen> {
       ),
       body: Column(
         children: [
-          // Presets
+          Container(
+            padding: const EdgeInsets.all(12),
+            color: Colors.orange.shade100,
+            child: const Row(
+              children: [
+                Icon(Icons.info, color: Colors.orange),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Note: Equalizer affects audio only on Android devices with compatible hardware.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
           Container(
             height: 60,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -65,7 +113,6 @@ class _EqualizerScreenState extends ConsumerState<EqualizerScreen> {
 
           const Divider(height: 1),
 
-          // Sliders
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
