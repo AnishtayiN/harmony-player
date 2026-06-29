@@ -3,14 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../providers/settings_provider.dart';
+import '../../../providers/player_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    try {
+      final uri = Uri.parse(url);
+      if (uri.scheme == 'http' || uri.scheme == 'https') {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (e) {
+      debugPrint('[Settings] Error opening URL: $e');
     }
   }
 
@@ -19,6 +26,7 @@ class SettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final settings = ref.watch(settingsProvider);
     final settingsCtrl = ref.read(settingsProvider.notifier);
+    final playerCtrl = ref.read(playerProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -45,8 +53,7 @@ class SettingsScreen extends ConsumerWidget {
                           Icon(_themeIcon(mode)),
                           const SizedBox(width: 12),
                           Text(_themeName(mode)),
-                          if (settings.themeMode == mode)
-                            const Spacer(),
+                          if (settings.themeMode == mode) const Spacer(),
                           if (settings.themeMode == mode)
                             const Icon(Icons.check, color: Colors.green),
                         ],
@@ -60,6 +67,7 @@ class SettingsScreen extends ConsumerWidget {
           SwitchListTile(
             secondary: const Icon(Icons.graphic_eq),
             title: const Text('Show Visualizer'),
+            subtitle: const Text('Animated bars (decorative)'),
             value: settings.visualizerEnabled,
             onChanged: settingsCtrl.setVisualizer,
           ),
@@ -101,6 +109,7 @@ class SettingsScreen extends ConsumerWidget {
                         TextButton(
                           onPressed: () {
                             settingsCtrl.setPlaybackSpeed(speed);
+                            playerCtrl.setPlaybackSpeed(speed);
                             Navigator.pop(ctx);
                           },
                           child: const Text('Save'),
