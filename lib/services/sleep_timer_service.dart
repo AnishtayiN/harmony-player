@@ -5,10 +5,11 @@ class SleepTimerService {
   Timer? _timer;
   DateTime? _endTime;
   VoidCallback? _onComplete;
-  StreamController<Duration?> _remainingController =
+  final StreamController<Duration?> _remainingController =
       StreamController<Duration?>.broadcast();
 
   Stream<Duration?> get remainingStream => _remainingController.stream;
+
   Duration? get remaining {
     if (_endTime == null) return null;
     final diff = _endTime!.difference(DateTime.now());
@@ -40,13 +41,6 @@ class SleepTimerService {
     _endTime = null;
     _onComplete = null;
     _remainingController.add(null);
-  }
-
-  void addTime(Duration duration) {
-    if (_endTime != null) {
-      _endTime = _endTime!.add(duration);
-      _remainingController.add(remaining);
-    }
   }
 
   void dispose() {
